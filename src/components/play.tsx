@@ -54,7 +54,11 @@ export default function PlayArea({typingFocused, setTypingFocused, inputRef}: Pl
             <div className={"w-[300px] h-[300px] justify-center items-center flex"}>
                 {centerContent}
             </div>
-            <div className={" flex fixed inset-x-0 justify-center bottom-0 text-center space-x- pb-16 "}>
+            <div className={"flex-col flex fixed items-center inset-x-0 justify-center bottom-0 text-center space-x- pb-16 "}>
+                <div className={"flex justify-between"}>
+                    <p>timer</p>
+                    <p>lives: {lives}</p>
+                </div>
                 <input
                     ref={inputRef}
                     onFocus={() => setTypingFocused(true)}

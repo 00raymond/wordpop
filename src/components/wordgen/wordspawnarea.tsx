@@ -1,5 +1,5 @@
 import fourLetterWords from "@/wordlist/fourl";
-import React, { useState, useEffect } from "react";
+import React, {useState, useEffect, useRef} from "react";
 
 interface Bubble {
     id: number;
@@ -15,7 +15,7 @@ interface Bubble {
 interface SpawnAreaProps {
     inVal : string
     lives: number
-    setLives: (lives: number) => void
+    setLives: (lives: number | ((lives: number) => number)) => void;
     gameStarted: boolean
     setInVal: (inVal: string) => void
 }
@@ -35,11 +35,21 @@ export default function SpawnArea({ gameStarted, setLives, lives, inVal, setInVa
 
     const endGame = () => {
         // destroy all bubbles, cancel timer, and end game
+        if (bubbleInterval.current !== null) clearInterval(bubbleInterval.current);
+        if (sizeInterval.current !== null) clearInterval(sizeInterval.current);
+        if (fadeOutInterval.current !== null) clearInterval(fadeOutInterval.current);
 
+        setBubbles([]);
+        setLives(0);
     }
 
+    const bubbleInterval = useRef<NodeJS.Timeout | null>(null);
+    const sizeInterval = useRef<NodeJS.Timeout | null>(null);
+    const fadeOutInterval = useRef<NodeJS.Timeout | null>(null);
+
     useEffect(() => {
-        const interval = setInterval(() => {
+
+        bubbleInterval.current = setInterval(() => {
             const word = fourLetterWords[Math.floor(Math.random() * fourLetterWords.length)];
             const x = Math.random() * 60;
             const y = Math.random() * 60;
@@ -47,45 +57,50 @@ export default function SpawnArea({ gameStarted, setLives, lives, inVal, setInVa
             setBubbles(bubbles => [...bubbles, newBubble]);
         }, timer);
 
-        return () => clearInterval(interval);
+        return () => { if (bubbleInterval.current) clearInterval(bubbleInterval.current); }
     }, [timer]);
 
     useEffect(() => {
-        const interval = setInterval(() => {
-            setBubbles(bubbles => bubbles.map(bubble => {
-                if (bubble.size < 70) {
-                    return { ...bubble, size: bubble.size + 1 };
-                } else if (!bubble.fadeOut) {
-                    // Start the fade-out by setting a flag and changing color to red
-                    return { ...bubble, color: "red", fadeOut: true };
-                }
-                return bubble;
-            }));
-
-            // Remove bubbles that have completed the fade-out
-            return bubbles.filter(bubble => !bubble.fadeOut || bubble.opacity > 0);
+        sizeInterval.current = setInterval(() => {
+            setBubbles(currentBubbles => {
+                return currentBubbles.map(bubble => {
+                    if (bubble.size < 70) {
+                        return {...bubble, size: bubble.size + 1};
+                    } else if (!bubble.fadeOut) {
+                        setLives(prevLives => {
+                            if (prevLives - 0.5 <= 0) {
+                                console.log("game ended.")
+                                endGame();
+                            }
+                            return prevLives - 0.5;
+                        });
+                        return {...bubble, color: "red", fadeOut: true, opacity: 0.99};
+                    }
+                    return bubble;
+                }).filter(bubble => !bubble.fadeOut || bubble.opacity > 0);
+            });
         }, speed / 100);
 
-        // Additional interval to decrement opacity for fading out
-        const fadeOutInterval = setInterval(() => {
-            setBubbles(bubbles => bubbles.map(bubble => {
-                if (bubble.fadeOut && bubble.opacity > 0) {
-                    return { ...bubble, opacity: bubble.opacity - 0.05 }; // Decrease opacity gradually
-                }
-                return bubble;
-            }));
-        }, 50); // Adjust the interval for how quickly the fade-out occurs
-
         return () => {
-            clearInterval(interval);
-            clearInterval(fadeOutInterval);
+            if (sizeInterval.current) clearInterval(sizeInterval.current);
         };
-    }, [speed, setBubbles]); // Only include dependencies directly used in the effect
+    }, [speed, setLives]);
 
 
-    const checkBubble = (word: string) => {
-        setBubbles(bubbles => bubbles.filter(bubble => bubble.word !== word));
+    useEffect (() => {
+    // Additional interval to decrement opacity for fading out
+    fadeOutInterval.current = setInterval(() => {
+        setBubbles(bubbles => bubbles.map(bubble => {
+            if (bubble.fadeOut && bubble.opacity > 0) {
+                return { ...bubble, opacity: bubble.opacity - 0.05 }; // Decrease opacity gradually
+            }
+            return bubble;
+        }));
+    }, 50); // Adjust the interval for how quickly the fade-out occurs
+    return () => {
+        if (fadeOutInterval.current) clearInterval(fadeOutInterval.current);
     };
+}, [setBubbles])
 
     return (
         <div className="fixed flex flex-col justify-center items-center space-y-4" style={{ height: "100vh", width: "100vw" }}>
