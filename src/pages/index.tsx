@@ -2,17 +2,25 @@ import Image from "next/image";
 import { Inter } from "next/font/google";
 import Header from "@/components/header";
 import Link from "next/link";
+import PlayArea from "@/components/play";
+import {useEffect, useRef, useState} from "react";
 
 const inter = Inter({ subsets: ["latin"] });
 
 export default function Home() {
-  return (
+
+    const [typingFocused, setTypingFocused] = useState<boolean>(false)
+    const inputRef = useRef<HTMLInputElement>(null)
+
+    return (
     <>
         <div className={"h-screen w-screen fixed flex justify-center top-0 pt-12"}>
             <Header />
         </div>
 
-
+        <div className={"h-screen w-screen flex items-center justify-center"}>
+            <PlayArea inputRef={inputRef} typingFocused={typingFocused} setTypingFocused={setTypingFocused} />
+        </div>
 
         <div className={"pb-3 flex fixed inset-x-0 justify-center bottom-0 text-center space-x-4"}>
             <Link href={"https://github.com/00raymond/wordpop"} target={"_blank"}>
